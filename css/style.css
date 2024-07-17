@@ -32,6 +32,9 @@ section{
   z-index: 2;
   overflow: hidden;
 }
+.sec1{
+  box-shadow: 0px 0px 10px 5px #d1d1eacc;
+}
 section > article {
   
   width: 360px;
