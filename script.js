@@ -5,7 +5,7 @@ function generateLottoNumbers() {
     for (let i = 0; i < 5; i++) {
         let numbers = [];
         while (numbers.length < 7) {  // 보너스 번호 포함 7개 숫자
-            let randNum = Math.floor(Math.random() * 45) + 1;
+            let randNum = getRandomNumberWithWeights();
             if (numbers.indexOf(randNum) === -1) {
                 numbers.push(randNum);
             }
@@ -24,6 +24,12 @@ function generateLottoNumbers() {
             lottoDiv.appendChild(numberCircle);
         });
 
+        // + 문자 추가
+        const plusSign = document.createElement('div');
+        plusSign.className = 'plus-sign';
+        plusSign.innerText = '+';
+        lottoDiv.appendChild(plusSign);
+
         // 보너스 번호 추가
         const bonusCircle = document.createElement('div');
         bonusCircle.className = `number-circle number-${getNumberRangeClass(bonusNumber)} bonus`;
@@ -31,6 +37,27 @@ function generateLottoNumbers() {
         lottoDiv.appendChild(bonusCircle);
 
         results.appendChild(lottoDiv);
+    }
+}
+
+function getRandomNumberWithWeights() {
+    const ranges = [
+        { min: 1, max: 10, weight: 0.15 },
+        { min: 11, max: 20, weight: 0.20 },
+        { min: 21, max: 30, weight: 0.30 },
+        { min: 31, max: 40, weight: 0.25 },
+        { min: 41, max: 45, weight: 0.10 },
+    ];
+
+    const totalWeight = ranges.reduce((acc, range) => acc + range.weight, 0);
+    const random = Math.random() * totalWeight;
+    let currentWeight = 0;
+
+    for (let range of ranges) {
+        currentWeight += range.weight;
+        if (random <= currentWeight) {
+            return Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+        }
     }
 }
 
