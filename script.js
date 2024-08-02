@@ -42,11 +42,11 @@ function generateLottoNumbers() {
 
 function getRandomNumberWithWeights() {
     const ranges = [
-        { min: 1, max: 10, weight: 0.15 },
-        { min: 11, max: 20, weight: 0.20 },
-        { min: 21, max: 30, weight: 0.30 },
-        { min: 31, max: 40, weight: 0.25 },
-        { min: 41, max: 45, weight: 0.10 },
+        { min: 1, max: 10, weight: 0.215 },
+        { min: 11, max: 20, weight: 0.233 },
+        { min: 21, max: 30, weight: 0.214 },
+        { min: 31, max: 40, weight: 0.227 },
+        { min: 41, max: 45, weight: 0.111 },
     ];
 
     const totalWeight = ranges.reduce((acc, range) => acc + range.weight, 0);
