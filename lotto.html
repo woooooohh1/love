@@ -44,13 +44,29 @@
             font-size: 24px;
             vertical-align: middle;
         }
+        .winning { border: 1px solid #161616; height: 30px; color: black; }
+        .match-message {
+            font-size: 18px;
+            color: green;
+        }
+        #winningNumbers,#bonusNumber{
+            border: 1px solid #161616; height: 30px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <h1>로또 번호 랜덤 추출기</h1>
     <h2>진수형 당첨을 위하여!!!</h2>
+    <div>
+        <div>
+            <button onclick="generateLottoNumbers()">번호 추출</button>
+            <button onclick="fetchWinningNumbers()">당첨 번호 가져오기</button>
+            <button onclick="checkLottoResults()">당첨 확인</button>
+        </div>
+    </div>
     <div id="results"></div>
-    <button onclick="generateLottoNumbers()">번호 추출</button>
+    
 
     <script src="script.js"></script>
 </body>
