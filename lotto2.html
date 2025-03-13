@@ -1,0 +1,166 @@
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="menu.css">
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+</head>
+<style>
+    @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
+
+    * {
+        font-family: Pretendard;
+    }
+
+    body {
+        background: #f7f8fc;
+        height: 960px;
+    }
+
+    canvas {
+        margin-top: 100px;
+        transition: 2s;
+    }
+
+    button {
+        z-index: 1000;
+        background: #febf00;
+        margin-top: 1rem;
+        padding: .8rem 1.8rem;
+        border: none;
+        font-size: 1.5rem;
+        font-weight: bold;
+        border-radius: 5px;
+        transition: .2s;
+        cursor: pointer;
+    }
+
+    button:active {
+        background: #444;
+        color: #f9f9f9;
+    }
+
+    #menu {
+        width: 100%;
+        height: 960px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        text-align: center;
+        flex-direction: column;
+        position: relative;
+    }
+
+    #menu::before {
+        margin-top: 100px;
+        content: "";
+        position: absolute;
+        width: 10px;
+        height: 50px;
+        border-radius: 5px;
+        background: #000;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 22;
+    }
+</style>
+<body>
+    <div id="menu">
+        <canvas width="600" height='600'></canvas>
+        <button onclick="rotate()">돌려돌려 돌림판</button>
+        <div id="addDiv">
+            <input type="text" id="menuAdd">
+            <button onclick="add()">메뉴 추가</button>
+        </div>
+    </div>
+
+    <script>
+        const $c = document.querySelector("canvas");
+        const ctx = $c.getContext(`2d`);
+        const menuAdd = document.querySelector('#menuAdd');
+        const product = ["1억", "1억", "1억", "1억", "1억", "1억", "1억", "1억", "1억", "5억", "5억", "5억", "5억", "꽝"];
+        const colors = [];
+        const areaRatios = {
+            "1억": 0.8,  // 80% 영역
+            "5억": 0.15, // 15% 영역
+            "꽝": 0.05   // 5% 영역
+        };
+
+        const newMake = () => {
+            const [cw, ch] = [$c.width / 2, $c.height / 2];
+            const arc = Math.PI * 2 / product.length;
+            for (let i = 0; i < product.length; i++) {
+                ctx.beginPath();
+                if (colors.length == 0) {
+                    for (var l = 0; l < product.length; l++) {
+                        let r = Math.floor(Math.random() * 256);
+                        let g = Math.floor(Math.random() * 256);
+                        let b = Math.floor(Math.random() * 256);
+                        colors.push("rgb(" + r + "," + g + "," + b + ")");
+                    }
+                }
+                ctx.fillStyle = colors[i % (colors.length)];
+                ctx.moveTo(cw, ch);
+                ctx.arc(cw, ch, cw, arc * (i - 1), arc * i);
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            ctx.fillStyle = "#fff";
+            ctx.font = "18px Pretendard";
+            ctx.textAlign = "center";
+
+            for (let i = 0; i < product.length; i++) {
+                const angle = (arc * i) + (arc / 2);
+
+                ctx.save();
+
+                ctx.translate(
+                    cw + Math.cos(angle) * (cw - 50),
+                    ch + Math.sin(angle) * (ch - 50)
+                );
+
+                ctx.rotate(angle + Math.PI / 2);
+
+                product[i].split(" ").forEach((text, j) => {
+                    ctx.fillText(text, 0, 30 * j);
+                });
+
+                ctx.restore();
+            }
+        }
+
+        const rotate = () => {
+            $c.style.transform = `initial`;
+            $c.style.transition = `initial`;
+
+            setTimeout(() => {
+                const arc = 360 / product.length;
+                // "꽝" 구역의 인덱스를 찾습니다.
+                const targetSection = product.indexOf("꽝");
+
+                // "꽝" 구역으로 회전하도록 설정
+                const rotateAngle = (targetSection * arc) + 3600 + (arc * 3) - (arc / 4);
+
+                // 회전 각도 적용
+                $c.style.transform = `rotate(-${rotateAngle}deg)`;
+                $c.style.transition = `2s`;
+            }, 1);
+        };
+
+        function add() {
+            if (menuAdd.value != undefined && menuAdd.value != "") {
+                product.push(menuAdd.value);
+                let r = Math.floor(Math.random() * 256);
+                let g = Math.floor(Math.random() * 256);
+                let b = Math.floor(Math.random() * 256);
+                colors.push("rgb(" + r + "," + g + "," + b + ")");
+                newMake();
+                menuAdd.value = "";
+            } else {
+                alert("메뉴를 입력한 후 버튼을 클릭 해 주세요");
+            }
+        }
+
+        newMake();
+    </script>
+</body>
