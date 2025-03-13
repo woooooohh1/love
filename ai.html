@@ -175,11 +175,32 @@
 
             // 어떤 입력이든 항상 "꺼져!"라고 응답
             // "hi"라는 메시지가 입력되면 자동으로 "꺼져"라는 답변을 추가
-            if (userInput.toLowerCase() === "안녕") {
+            // "안녕"이 포함되면 자동으로 "안녕하세요. 감사해요. 잘있어요. 다시만나요."
+            if (userInput.toLowerCase().includes("안녕")) {
                 appendMessage("bot", "안녕하세요. 감사해요. 잘있어요. 다시만나요.");
                 return;
-            } 
+            }
+
+            // "꺼져"가 포함되면 자동으로 "심한말은 삼가해주세요"
+            if (userInput.toLowerCase().includes("꺼져")) {
+                appendMessage("bot", "심한말은 삼가해주세요");
+                return;
+            }
+
+            // "썩 물러가"가 포함되면 자동으로 "알겠어"
+            if (userInput.toLowerCase().includes("물러가")) {
+                appendMessage("bot", "알겠어");
+                return;
+            }
+
+            // "썩 물러가"가 포함되면 자동으로 "알겠어"
+            if (userInput.toLowerCase().includes("개발")) {
+                appendMessage("bot", "학습이 완료되면 다시 연락드리겠습니다.");
+                return;
+            }
             appendMessage("bot", "안녕하세요 저는 아직 개발중입니다. 죄송하지만 나중에 우리 다시만나요 그럼 이만 저는 물러나겠습니다.");
+            appendMessage("bot", "앞으로 Woo AI로 성공을 거두겠습니다.");
+            appendMessage("bot", "많은 투자 부탁드립니다. 푸하하하하");
 
 
 
