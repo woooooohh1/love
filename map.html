@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>거래처 지도</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      height: 100vh;
+      background: #f2f4f8;
+    }
+
+    #map {
+      height: 100%;
+      width: 50%;
+    }
+
+    .sidebar {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .section {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+      padding: 16px;
+    }
+
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .card {
+      flex: 1 1 calc(50% - 12px);
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 12px;
+      transition: box-shadow 0.3s;
+      cursor: pointer;
+    }
+
+    .card.active {
+      border: 2px solid #4a90e2;
+      background-color: #f0f8ff;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h4 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+    }
+
+    .card small {
+      color: #666;
+    }
+
+    .history ul {
+      padding-left: 18px;
+      margin: 0;
+    }
+
+    .history li {
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+  <div class="sidebar">
+    <div class="section" id="company-list">
+      <h3>📌 거래처 목록</h3>
+
+      <!-- ✅ 여기에 추가 -->
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <input type="text" id="search-input" placeholder="🔍 거래처 검색..."
+          style="flex:1; padding: 8px; border-radius: 8px; border: 1px solid #ccc;" />
+        <select id="industry-filter" style="padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
+          <option value="">전체 산업군</option>
+          <option value="제조업">제조업</option>
+          <option value="서비스업">서비스업</option>
+          <option value="IT">IT</option>
+        </select>
+      </div>
+
+      <div class="cards" id="cards"></div>
+    </div>
+
+    <div class="section" id="activity-log">
+      <h3>📝 영업 활동</h3>
+      <div class="history">
+        <ul id="history-list"></ul>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    let selectedCard = null;
+    let selectedCircle = null;
+
+    const map = L.map('map').setView([36.5, 127.8], 7);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const companies = [
+      { id: 'COM00001', name: '현대자동차', lat: 37.456, lng: 126.705, region: '서울특별시', address: '서울 서초구 헌릉로 12', industry: '제조업', contact: '02-3456-7890' },
+      { id: 'COM00002', name: '삼성SDI', lat: 37.275, lng: 127.045, region: '경기도', address: '경기 용인시 기흥구 삼성로 150', industry: '제조업', contact: '031-9876-1234' },
+      { id: 'COM00003', name: '카카오', lat: 37.402, lng: 127.108, region: '경기도', address: '경기 성남시 분당구 판교역로 235', industry: 'IT서비스', contact: '031-1234-5678' },
+      { id: 'COM00004', name: '네이버', lat: 37.359, lng: 127.105, region: '경기도', address: '경기 성남시 분당구 정자동 178-1', industry: 'IT서비스', contact: '031-5678-1234' },
+      { id: 'COM00005', name: 'LG화학', lat: 36.350, lng: 127.384, region: '대전광역시', address: '대전 유성구 문지로 300', industry: '화학', contact: '042-123-4567' },
+      { id: 'COM00006', name: '한화시스템', lat: 37.553, lng: 126.972, region: '서울특별시', address: '서울 중구 장교동 1', industry: '방산/IT', contact: '02-2222-2222' },
+      { id: 'COM00007', name: '우아한형제들', lat: 37.497, lng: 127.028, region: '서울특별시', address: '서울 강남구 테헤란로 152', industry: '플랫폼', contact: '02-3333-4444' },
+      { id: 'COM00008', name: 'NHN', lat: 37.344, lng: 127.106, region: '경기도', address: '경기 성남시 분당구 삼평동', industry: 'IT서비스', contact: '031-456-7890' },
+      { id: 'COM00009', name: '제주항공', lat: 33.510, lng: 126.491, region: '제주특별자치도', address: '제주 제주시 중앙로 123', industry: '항공', contact: '064-789-4561' },
+      { id: 'COM00010', name: '부산은행', lat: 35.179, lng: 129.075, region: '부산광역시', address: '부산 중구 중앙대로 100', industry: '금융', contact: '051-888-0000' },
+      { id: 'COM00011', name: '한국전력', lat: 35.159, lng: 126.852, region: '광주광역시', address: '광주 서구 상무중앙로 120', industry: '에너지', contact: '062-111-2222' },
+      { id: 'COM00012', name: '셀트리온', lat: 37.533, lng: 126.896, region: '서울특별시', address: '서울 영등포구 여의대로 24', industry: '바이오', contact: '02-444-7777' },
+      { id: 'COM00013', name: '에코프로', lat: 36.389, lng: 127.438, region: '충청북도', address: '충북 청주시 흥덕구 봉명동', industry: '소재', contact: '043-765-4321' },
+      { id: 'COM00014', name: '더존비즈온', lat: 37.656, lng: 127.061, region: '서울특별시', address: '서울 도봉구 쌍문동', industry: 'ERP', contact: '02-8888-9999' },
+      { id: 'COM00015', name: 'KT&G', lat: 36.487, lng: 127.283, region: '세종특별자치시', address: '세종시 조치원읍 세종로 123', industry: '제조업', contact: '044-111-2222' },
+      { id: 'COM00016', name: '두산중공업', lat: 35.181, lng: 129.072, region: '부산광역시', address: '부산 기장군 장안읍', industry: '중공업', contact: '051-4321-1234' },
+      { id: 'COM00017', name: '포스코', lat: 35.534, lng: 129.308, region: '울산광역시', address: '울산 동구 방어진순환도로 1000', industry: '제조업', contact: '052-333-1234' },
+      { id: 'COM00018', name: '롯데케미칼', lat: 35.213, lng: 128.681, region: '경상남도', address: '경남 창원시 의창구 중앙대로 100', industry: '화학', contact: '055-567-9876' },
+      { id: 'COM00019', name: '대우건설', lat: 37.563, lng: 126.982, region: '서울특별시', address: '서울 종로구 수송동', industry: '건설업', contact: '02-2323-1212' },
+      { id: 'COM00020', name: '현대제철', lat: 36.012, lng: 129.365, region: '경상북도', address: '경북 포항시 남구', industry: '철강', contact: '054-123-4567' }
+    ];
+
+
+    // const activities = {
+    //   'COM00001': ['2024-12-01 방문상담', '2025-01-10 계약협의'],
+    //   'COM00002': ['2025-03-20 현장미팅'],
+    //   'COM00003': ['2025-02-15 기술지원 요청', '2025-03-01 계약체결']
+    // };
+
+    const activities = {
+      'COM00001': [
+        { type: '대면', date: '2025-01-03', content: '제품 시연 및 상담' },
+        { type: '이메일', date: '2025-01-08', content: '제안서 송부' }
+      ],
+      'COM00002': [
+        { type: '유선', date: '2025-02-12', content: '납기 일정 확인' }
+      ],
+      'COM00003': [
+        { type: '대면', date: '2025-01-20', content: '기술 미팅' },
+        { type: '이메일', date: '2025-01-21', content: '회의록 전달' }
+      ],
+      'COM00005': [
+        { type: '대면', date: '2025-02-01', content: '현장 방문 및 지원 검토' },
+        { type: '유선', date: '2025-02-02', content: '결정사항 전달' }
+      ],
+      'COM00007': [
+        { type: '대면', date: '2025-02-10', content: '서비스 협의' }
+      ],
+      'COM00010': [
+        { type: '이메일', date: '2025-02-15', content: '계약서 송부' }
+      ],
+      'COM00014': [
+        { type: '유선', date: '2025-03-01', content: '기능 문의' },
+        { type: '이메일', date: '2025-03-02', content: '자료 요청 회신' }
+      ]
+    };
+
+    const geoRegions = {
+      "서울특별시": [[37.5665, 126.9780]],
+      "경기도": [[37.2636, 127.0286]],
+      "강원도": [[37.8228, 128.1555]],
+      "충청남도": [[36.5184, 126.8000]],
+      "충청북도": [[36.6357, 127.4917]],
+      "세종특별자치시": [[36.4801, 127.2890]],
+      "대전광역시": [[36.3504, 127.3845]],
+      "인천광역시": [[37.4563, 126.7052]],
+      "광주광역시": [[35.1595, 126.8526]],
+      "대구광역시": [[35.8722, 128.6025]],
+      "부산광역시": [[35.1796, 129.0756]],
+      "울산광역시": [[35.5384, 129.3114]],
+      "전라북도": [[35.7167, 127.1442]],
+      "전라남도": [[34.8161, 126.4630]],
+      "경상북도": [[36.4919, 128.8889]],
+      "경상남도": [[35.4606, 128.2132]],
+      "제주특별자치도": [[33.4996, 126.5312]]
+    };
+
+    for (const [region, coords] of Object.entries(geoRegions)) {
+      const circle = L.circle(coords[0], {
+        color: '#666',
+        fillColor: '#a1c4fd',
+        fillOpacity: 0.3,
+        radius: 25000
+      }).addTo(map).on('click', () => {
+        showCompanies(region);
+
+        if (selectedCircle) {
+          selectedCircle.setStyle({ color: '#666', fillOpacity: 0.3 });
+        }
+
+        circle.setStyle({ color: '#4a90e2', fillOpacity: 0.5 });
+        selectedCircle = circle;
+      }).bindTooltip(region);
+    }
+
+    // 카드 렌더 함수 수정
+    function showCompanies(region) {
+      const cardsEl = document.getElementById('cards');
+      const searchText = document.getElementById('search-input').value.toLowerCase();
+      const selectedIndustry = document.getElementById('industry-filter').value;
+
+      cardsEl.innerHTML = '';
+      document.getElementById('history-list').innerHTML = '';
+      selectedCard = null;
+
+      const filtered = companies.filter(c =>
+        c.region === region &&
+        c.name.toLowerCase().includes(searchText) &&
+        (selectedIndustry === '' || c.industry === selectedIndustry)
+      );
+
+      filtered.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<h4>${c.name}</h4><small>${c.industry} | ${c.contact}</small><br/><small>${c.address}</small>`;
+        card.onclick = () => {
+          showActivities(c.id);
+          if (selectedCard) selectedCard.classList.remove('active');
+          card.classList.add('active');
+          selectedCard = card;
+
+          // 지도 이동 추가
+          map.setView([c.lat, c.lng], 11);
+        };
+        cardsEl.appendChild(card);
+      });
+    }
+
+    // 검색/필터 입력 이벤트
+    document.getElementById('search-input').addEventListener('input', () => {
+      if (selectedCircle) selectedCircle.fire('click');
+    });
+
+    document.getElementById('industry-filter').addEventListener('change', () => {
+      if (selectedCircle) selectedCircle.fire('click');
+    });
+
+
+
+
+    function showActivities(companyId) {
+      const historyEl = document.getElementById('history-list');
+      historyEl.innerHTML = '';
+      const logs = activities[companyId] || [];
+      logs.forEach(({ date, type, content }) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${date}</strong> <span style="background:#e0f0ff; color:#0077cc; border-radius:4px; padding:2px 6px; margin-right:4px;">${type}</span> ${content}`;
+        historyEl.appendChild(li);
+      });
+    }
+
+  </script>
+</body>
+
+</html>
