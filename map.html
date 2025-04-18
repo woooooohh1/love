@@ -82,6 +82,45 @@
     .history li {
       margin-bottom: 6px;
     }
+
+    .leaflet-interactive.hide-circle {
+      opacity: 0 !important;
+    }
+
+    .leaflet-interactive:focus {
+      outline: none;
+    }
+
+    .marker-dot {
+      width: 14px;
+      height: 14px;
+      background-color: #ff5e57;
+      border: 2px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .marker-bounce {
+      animation: bounceMarker 0.6s ease-out;
+    }
+
+    @keyframes bounceMarker {
+      0% {
+        transform: scale(1);
+      }
+
+      30% {
+        transform: scale(1.4);
+      }
+
+      60% {
+        transform: scale(0.8);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
   </style>
 </head>
 
@@ -99,7 +138,11 @@
           <option value="">전체 산업군</option>
           <option value="제조업">제조업</option>
           <option value="서비스업">서비스업</option>
-          <option value="IT">IT</option>
+          <option value="IT서비스">IT</option>
+          <option value="화학">화학</option>
+          <option value="방산/IT">방산/IT</option>
+          <option value="플랫폼">플랫폼</option>
+          <option value="항공">항공</option>
         </select>
       </div>
 
@@ -116,14 +159,17 @@
 
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <script>
     let selectedCard = null;
     let selectedCircle = null;
+    let selectedRegion = null;
 
     const map = L.map('map').setView([36.5, 127.8], 7);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: '&copy; OpenStreetMap contributors',
+
     }).addTo(map);
 
     const companies = [
@@ -184,46 +230,99 @@
       ]
     };
 
-    const geoRegions = {
-      "서울특별시": [[37.5665, 126.9780]],
-      "경기도": [[37.2636, 127.0286]],
-      "강원도": [[37.8228, 128.1555]],
-      "충청남도": [[36.5184, 126.8000]],
-      "충청북도": [[36.6357, 127.4917]],
-      "세종특별자치시": [[36.4801, 127.2890]],
-      "대전광역시": [[36.3504, 127.3845]],
-      "인천광역시": [[37.4563, 126.7052]],
-      "광주광역시": [[35.1595, 126.8526]],
-      "대구광역시": [[35.8722, 128.6025]],
-      "부산광역시": [[35.1796, 129.0756]],
-      "울산광역시": [[35.5384, 129.3114]],
-      "전라북도": [[35.7167, 127.1442]],
-      "전라남도": [[34.8161, 126.4630]],
-      "경상북도": [[36.4919, 128.8889]],
-      "경상남도": [[35.4606, 128.2132]],
-      "제주특별자치도": [[33.4996, 126.5312]]
-    };
+    // const geoRegions = {
+    //   "서울특별시": [[37.5665, 126.9780]],
+    //   "경기도": [[37.2636, 127.0286]],
+    //   "강원도": [[37.8228, 128.1555]],
+    //   "충청남도": [[36.5184, 126.8000]],
+    //   "충청북도": [[36.6357, 127.4917]],
+    //   "세종특별자치시": [[36.4801, 127.2890]],
+    //   "대전광역시": [[36.3504, 127.3845]],
+    //   "인천광역시": [[37.4563, 126.7052]],
+    //   "광주광역시": [[35.1595, 126.8526]],
+    //   "대구광역시": [[35.8722, 128.6025]],
+    //   "부산광역시": [[35.1796, 129.0756]],
+    //   "울산광역시": [[35.5384, 129.3114]],
+    //   "전라북도": [[35.7167, 127.1442]],
+    //   "전라남도": [[34.8161, 126.4630]],
+    //   "경상북도": [[36.4919, 128.8889]],
+    //   "경상남도": [[35.4606, 128.2132]],
+    //   "제주특별자치도": [[33.4996, 126.5312]]
+    // };
 
-    for (const [region, coords] of Object.entries(geoRegions)) {
-      const circle = L.circle(coords[0], {
-        color: '#666',
-        fillColor: '#a1c4fd',
-        fillOpacity: 0.3,
-        radius: 25000
-      }).addTo(map).on('click', () => {
-        showCompanies(region);
+    // for (const [region, coords] of Object.entries(geoRegions)) {
+    //   const circle = L.circle(coords[0], {
+    //     color: '#666',
+    //     fillColor: '#a1c4fd',
+    //     fillOpacity: 0.3,
+    //     radius: 25000
+    //   }).addTo(map).on('click', () => {
+    //     showCompanies(region);
 
-        if (selectedCircle) {
-          selectedCircle.setStyle({ color: '#666', fillOpacity: 0.3 });
-        }
+    //     if (selectedCircle) {
+    //       selectedCircle.setStyle({ color: '#666', fillOpacity: 0.3 });
+    //     }
 
-        circle.setStyle({ color: '#4a90e2', fillOpacity: 0.5 });
-        selectedCircle = circle;
-      }).bindTooltip(region);
-    }
+    //     circle.setStyle({ color: '#4a90e2', fillOpacity: 0.5 });
+    //     selectedCircle = circle;
+    //   }).bindTooltip(region);
+    // }
+
+    // 서울, 경기 등 17개 시도의 경계가 담긴 GeoJSON 파일
+    fetch('TL_SCCO_CTPRVN.json')
+      .then(res => res.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: {
+            color: '#888',
+            weight: 1,
+            fillColor: '#a1c4fd',
+            fillOpacity: 0.3
+          },
+          onEachFeature: function (feature, layer) {
+            const region = feature.properties?.CTP_KOR_NM || "알 수 없음";
+            layer.on('click', function () {
+              showCompanies(region); // 거래처 필터링 호출
+
+              // 이전 선택 해제
+              if (selectedRegion) {
+                selectedRegion.setStyle({
+                  color: '#888',
+                  fillColor: '#a1c4fd',
+                  fillOpacity: 0.3,
+                  weight: 1
+                });
+              }
+
+              // 선택된 영역 강조
+              layer.setStyle({
+                color: '#4a90e2',
+                fillColor: '#4a90e2',
+                fillOpacity: 0.5,
+                weight: 2
+              });
+
+              selectedRegion = layer;
+            });
+
+            layer.bindTooltip(region); // 툴팁 표시
+          }
+        }).addTo(map);
+        // ✅ 여기 아래에 넣으면 완벽!
+        map.on('zoomend', function () {
+          const zoom = map.getZoom();
+          if (zoom < 10) {
+            document.querySelectorAll('.leaflet-interactive').forEach(el => {
+              el.classList.remove('hide-circle');
+            });
+          }
+        });
+      });
+
 
     // 카드 렌더 함수 수정
     function showCompanies(region) {
+      let selectedMarker = null;
       const cardsEl = document.getElementById('cards');
       const searchText = document.getElementById('search-input').value.toLowerCase();
       const selectedIndustry = document.getElementById('industry-filter').value;
@@ -248,8 +347,30 @@
           card.classList.add('active');
           selectedCard = card;
 
-          // 지도 이동 추가
-          map.setView([c.lat, c.lng], 11);
+          // ✅ 원 숨기기
+          document.querySelectorAll('.leaflet-interactive').forEach(el => {
+            el.classList.add('hide-circle');
+          });
+
+          // ✅ 지도 이동
+          map.flyTo([c.lat, c.lng], 18, {
+            duration: 1.5
+          });
+          // ✅ 기존 마커 제거
+          if (selectedMarker) {
+            map.removeLayer(selectedMarker);
+          }
+
+          // ✅ 새 마커 추가 (애니메이션 포함)
+          selectedMarker = L.marker([c.lat, c.lng], {
+            icon: L.divIcon({
+              className: 'custom-marker',
+              html: `<div class="marker-dot marker-bounce"></div>`,
+              iconSize: [20, 20],
+              iconAnchor: [10, 10]
+            })
+          }).addTo(map);
+
         };
         cardsEl.appendChild(card);
       });
@@ -264,6 +385,12 @@
       if (selectedCircle) selectedCircle.fire('click');
     });
 
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        map.flyTo([36.5, 127.5], 7, { duration: 1.5 });
+        // document.getElementById('reset-view').style.display = 'none';
+      }
+    });
 
 
 
