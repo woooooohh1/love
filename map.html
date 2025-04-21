@@ -19,6 +19,10 @@
       background: #f2f4f8;
     }
 
+    h3 {
+      margin-top: 4px;
+    }
+
     #map {
       height: 100%;
       width: 50%;
@@ -121,6 +125,59 @@
         transform: scale(1);
       }
     }
+
+    .info.legend {
+      background: white;
+      padding: 8px 12px;
+      font-size: 12px;
+      line-height: 18px;
+      color: #333;
+      border-radius: 4px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    }
+
+    .info.legend i {
+      width: 14px;
+      height: 14px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.8;
+    }
+
+    .startup-input {
+      width: 100%;
+      padding: 10px 14px;
+      margin-top: 8px;
+      border: 1px solid #d0d7de;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .startup-input:focus {
+      outline: none;
+      border-color: #4a90e2;
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+      background: #fff;
+    }
+
+    #add-company-btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px;
+      border: none;
+      background-color: #4a90e2;
+      color: white;
+      border-radius: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    #add-company-btn:hover {
+      background-color: #357ABD;
+    }
   </style>
 </head>
 
@@ -129,20 +186,19 @@
   <div class="sidebar">
     <div class="section" id="company-list">
       <h3>📌 거래처 목록</h3>
-
-      <!-- ✅ 여기에 추가 -->
       <div style="display: flex; gap: 8px; margin-bottom: 12px;">
         <input type="text" id="search-input" placeholder="🔍 거래처 검색..."
           style="flex:1; padding: 8px; border-radius: 8px; border: 1px solid #ccc;" />
         <select id="industry-filter" style="padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
           <option value="">전체 산업군</option>
           <option value="제조업">제조업</option>
+          <option value="건설업">건설업</option>
+          <option value="IT/정보통신">IT/정보통신</option>
+          <option value="금융업">금융업</option>
           <option value="서비스업">서비스업</option>
-          <option value="IT서비스">IT</option>
-          <option value="화학">화학</option>
-          <option value="방산/IT">방산/IT</option>
-          <option value="플랫폼">플랫폼</option>
-          <option value="항공">항공</option>
+          <option value="에너지업">에너지업</option>
+          <option value="의료/바이오">의료/바이오</option>
+          <option value="도소매업">도소매업</option>
         </select>
       </div>
 
@@ -161,19 +217,15 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
+    // 선택한 거래처
     let selectedCard = null;
-    let selectedCircle = null;
+    // 선택한도
     let selectedRegion = null;
-
-    const map = L.map('map').setView([36.5, 127.8], 7);
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-
-    }).addTo(map);
-
+    // 지도 마커
+    let selectedMarker = null;
+    // 변수 설정
     const companies = [
-      { id: 'COM00001', name: '현대자동차', lat: 37.456, lng: 126.705, region: '서울특별시', address: '서울 서초구 헌릉로 12', industry: '제조업', contact: '02-3456-7890' },
+      { id: 'COM00001', name: '현대자동차', lat: 37.464362322, lng: 127.042663599215, region: '서울특별시', address: '서울 서초구 헌릉로 12', industry: '제조업', contact: '02-3456-7890' },
       { id: 'COM00002', name: '삼성SDI', lat: 37.275, lng: 127.045, region: '경기도', address: '경기 용인시 기흥구 삼성로 150', industry: '제조업', contact: '031-9876-1234' },
       { id: 'COM00003', name: '카카오', lat: 37.402, lng: 127.108, region: '경기도', address: '경기 성남시 분당구 판교역로 235', industry: 'IT서비스', contact: '031-1234-5678' },
       { id: 'COM00004', name: '네이버', lat: 37.359, lng: 127.105, region: '경기도', address: '경기 성남시 분당구 정자동 178-1', industry: 'IT서비스', contact: '031-5678-1234' },
@@ -194,14 +246,42 @@
       { id: 'COM00019', name: '대우건설', lat: 37.563, lng: 126.982, region: '서울특별시', address: '서울 종로구 수송동', industry: '건설업', contact: '02-2323-1212' },
       { id: 'COM00020', name: '현대제철', lat: 36.012, lng: 129.365, region: '경상북도', address: '경북 포항시 남구', industry: '철강', contact: '054-123-4567' }
     ];
+    // 맵 설정
+    const map = L.map('map').setView([36.5, 127.8], 7);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+    // 범례 설정
+    const totalCompanies = companies.length;
 
+    // 거래처 수에 따라 범례의 구간을 동적으로 설정
+    const getDynamicGrades = (total) => {
+      let step = Math.ceil(total / 4); // 5개 구간으로 나눔
+      const grades = [];
 
-    // const activities = {
-    //   'COM00001': ['2024-12-01 방문상담', '2025-01-10 계약협의'],
-    //   'COM00002': ['2025-03-20 현장미팅'],
-    //   'COM00003': ['2025-02-15 기술지원 요청', '2025-03-01 계약체결']
-    // };
+      for (let i = 0; i <= total; i += step) {
+        grades.push(i);
+      }
+      return grades;
+    };
+    const grades = getDynamicGrades(totalCompanies);
 
+    const legend = L.control({ position: 'topright' });
+    legend.onAdd = function (map) {
+      const div = L.DomUtil.create('div', 'info legend');
+      // const grades = [0, 5, 10, 15, 20];
+      div.innerHTML = '<strong>거래처 수</strong><br>';
+      for (let i = 0; i < grades.length; i++) {
+        const from = grades[i];
+        const to = grades[i + 1];
+        div.innerHTML +=
+          `<i style="background:${getColor(from + 1)}"></i> ${from}${to ? '&ndash;' + to : '+'}<br>`;
+      }
+      return div;
+    };
+    legend.addTo(map);
+
+    // 영업활동 내역
     const activities = {
       'COM00001': [
         { type: '대면', date: '2025-01-03', content: '제품 시연 및 상담' },
@@ -230,85 +310,78 @@
       ]
     };
 
-    // const geoRegions = {
-    //   "서울특별시": [[37.5665, 126.9780]],
-    //   "경기도": [[37.2636, 127.0286]],
-    //   "강원도": [[37.8228, 128.1555]],
-    //   "충청남도": [[36.5184, 126.8000]],
-    //   "충청북도": [[36.6357, 127.4917]],
-    //   "세종특별자치시": [[36.4801, 127.2890]],
-    //   "대전광역시": [[36.3504, 127.3845]],
-    //   "인천광역시": [[37.4563, 126.7052]],
-    //   "광주광역시": [[35.1595, 126.8526]],
-    //   "대구광역시": [[35.8722, 128.6025]],
-    //   "부산광역시": [[35.1796, 129.0756]],
-    //   "울산광역시": [[35.5384, 129.3114]],
-    //   "전라북도": [[35.7167, 127.1442]],
-    //   "전라남도": [[34.8161, 126.4630]],
-    //   "경상북도": [[36.4919, 128.8889]],
-    //   "경상남도": [[35.4606, 128.2132]],
-    //   "제주특별자치도": [[33.4996, 126.5312]]
-    // };
+    // 지역별 거래처 수 count
+    const regionCompanyCount = {};
+    companies.forEach(c => {
+      regionCompanyCount[c.region] = (regionCompanyCount[c.region] || 0) + 1;
+    });
 
-    // for (const [region, coords] of Object.entries(geoRegions)) {
-    //   const circle = L.circle(coords[0], {
-    //     color: '#666',
-    //     fillColor: '#a1c4fd',
-    //     fillOpacity: 0.3,
-    //     radius: 25000
-    //   }).addTo(map).on('click', () => {
-    //     showCompanies(region);
-
-    //     if (selectedCircle) {
-    //       selectedCircle.setStyle({ color: '#666', fillOpacity: 0.3 });
-    //     }
-
-    //     circle.setStyle({ color: '#4a90e2', fillOpacity: 0.5 });
-    //     selectedCircle = circle;
-    //   }).bindTooltip(region);
-    // }
+    // 거래처 밀집 정도 색깔 지정
+    function getColor(d) {
+      return d > 20 ? '#08306b' :
+        d > 15 ? '#2171b5' :
+          d > 10 ? '#4292c6' :
+            d > 5 ? '#6baed6' :
+              d > 0 ? '#c6dbef' :
+                '#f7fbff';
+    }
 
     // 서울, 경기 등 17개 시도의 경계가 담긴 GeoJSON 파일
     fetch('TL_SCCO_CTPRVN.json')
       .then(res => res.json())
       .then(data => {
         L.geoJSON(data, {
-          style: {
-            color: '#888',
-            weight: 1,
-            fillColor: '#a1c4fd',
-            fillOpacity: 0.3
+          style: function (feature) {
+            // 도 이름
+            const regionName = feature.properties?.CTP_KOR_NM;
+            const count = regionCompanyCount[regionName] || 0;
+            return {
+              color: '#888',
+              weight: 1,
+              fillColor: getColor(count),
+              fillOpacity: 0.7
+            };
           },
           onEachFeature: function (feature, layer) {
             const region = feature.properties?.CTP_KOR_NM || "알 수 없음";
+            const count = regionCompanyCount[region] || 0;
+            layer.bindTooltip(`${region} (${count}개)`, { sticky: true });
+            if (region === "서울특별시") {
+              seoulLayer = layer; // 👉 저장해둔다
+            }
             layer.on('click', function () {
-              showCompanies(region); // 거래처 필터링 호출
-
-              // 이전 선택 해제
+              // 기존 마커 제거
+              if (selectedMarker) {
+                map.removeLayer(selectedMarker);
+              }
+              showCompanies(region);
               if (selectedRegion) {
+                const prevRegion = selectedRegion.feature.properties.CTP_KOR_NM;
                 selectedRegion.setStyle({
                   color: '#888',
-                  fillColor: '#a1c4fd',
-                  fillOpacity: 0.3,
+                  fillColor: getColor(regionCompanyCount[prevRegion] || 0),
+                  fillOpacity: 0.7,
                   weight: 1
                 });
               }
-
-              // 선택된 영역 강조
               layer.setStyle({
                 color: '#4a90e2',
-                fillColor: '#4a90e2',
-                fillOpacity: 0.5,
+                fillColor: getColor(count),
+                fillOpacity: 0.9,
                 weight: 2
               });
 
               selectedRegion = layer;
             });
-
-            layer.bindTooltip(region); // 툴팁 표시
           }
         }).addTo(map);
-        // ✅ 여기 아래에 넣으면 완벽!
+        // 초기 서울 선택
+        if (seoulLayer) {
+          seoulLayer.fire('click');
+        }
+
+        // 거래처 클릭 하면 경계선 배경 파란색 사라짐
+        // 그래서 맵을 축소하면 다시 경계선 생기게끔
         map.on('zoomend', function () {
           const zoom = map.getZoom();
           if (zoom < 10) {
@@ -322,7 +395,7 @@
 
     // 카드 렌더 함수 수정
     function showCompanies(region) {
-      let selectedMarker = null;
+
       const cardsEl = document.getElementById('cards');
       const searchText = document.getElementById('search-input').value.toLowerCase();
       const selectedIndustry = document.getElementById('industry-filter').value;
@@ -336,7 +409,37 @@
         c.name.toLowerCase().includes(searchText) &&
         (selectedIndustry === '' || c.industry === selectedIndustry)
       );
+      if (filtered.length === 0 && searchText) {
+        const newCard = document.createElement('div');
+        newCard.className = 'card new-company';
+        newCard.innerHTML = `
+          <h4>➕ '${searchText}' 거래처 추가</h4>
+          <small>이 지역에 새로운 거래처로 등록합니다.</small><br/>
+          <input type="text" placeholder="산업군 입력" id="new-industry" class="startup-input" />
+          <input type="text" placeholder="연락처 입력" id="new-contact" class="startup-input" />
+          <input type="text" placeholder="주소 입력" id="new-address" class="startup-input" />
+          <button id="add-company-btn">등록</button>
+          `;
 
+        cardsEl.appendChild(newCard);
+
+        // 버튼 클릭 시 신규 거래처 추가
+        document.getElementById('add-company-btn').addEventListener('click', () => {
+          const newCompany = {
+            id: Date.now(),
+            name: searchText,
+            region: region,
+            industry: document.getElementById('new-industry').value || "미지정",
+            contact: document.getElementById('new-contact').value || "-",
+            address: document.getElementById('new-address').value || "주소 미입력",
+            lat: map.getCenter().lat,
+            lng: map.getCenter().lng
+          };
+
+          companies.push(newCompany);
+          showCompanies(region); // 다시 보여주기
+        });
+      }
       filtered.forEach(c => {
         const card = document.createElement('div');
         card.className = 'card';
@@ -347,16 +450,16 @@
           card.classList.add('active');
           selectedCard = card;
 
-          // ✅ 원 숨기기
+          // 경계선 숨기기
           document.querySelectorAll('.leaflet-interactive').forEach(el => {
             el.classList.add('hide-circle');
           });
 
-          // ✅ 지도 이동
+          // 지도 이동
           map.flyTo([c.lat, c.lng], 18, {
             duration: 1.5
           });
-          // ✅ 기존 마커 제거
+          // 기존 마커 제거
           if (selectedMarker) {
             map.removeLayer(selectedMarker);
           }
@@ -378,17 +481,22 @@
 
     // 검색/필터 입력 이벤트
     document.getElementById('search-input').addEventListener('input', () => {
-      if (selectedCircle) selectedCircle.fire('click');
+      if (selectedRegion) {
+        const region = selectedRegion.feature.properties.CTP_KOR_NM;
+        showCompanies(region);
+      }
     });
 
     document.getElementById('industry-filter').addEventListener('change', () => {
-      if (selectedCircle) selectedCircle.fire('click');
+      if (selectedRegion) {
+        const region = selectedRegion.feature.properties.CTP_KOR_NM;
+        showCompanies(region);
+      }
     });
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
         map.flyTo([36.5, 127.5], 7, { duration: 1.5 });
-        // document.getElementById('reset-view').style.display = 'none';
       }
     });
 
